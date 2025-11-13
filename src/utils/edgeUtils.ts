@@ -88,6 +88,7 @@ export function doesCurveIntersectNodes(
 
 /**
  * Calculate control points for a Bézier curve between two nodes
+ * Creates curves that approach nodes at approximately 90-degree angles
  */
 export function calculateControlPoints(
   start: Point,
@@ -97,23 +98,34 @@ export function calculateControlPoints(
   curvature: number = 0.3
 ): { control1: Point; control2: Point } {
   const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
   
-  // Base control point distance
-  const controlDistance = distance * curvature;
+  // Enhanced control point calculation for 90-degree approaches with more spacing
+  const minControlDistance = 120; // Increased minimum distance for more space around nodes
+  const maxControlDistance = 200; // Increased maximum for wider curves when needed
+  
+  // Calculate adaptive control distance based on node separation
+  const horizontalDistance = Math.abs(dx);
+  
+  // Use larger control distance for nodes that are close vertically but far horizontally
+  const adaptiveDistance = Math.min(
+    Math.max(horizontalDistance * 0.5, minControlDistance), // Increased multiplier for more spacing
+    maxControlDistance
+  );
   
   // Calculate control point directions based on connection sides
   const sourceDirection = sourceConnectionSide === 'right' ? 1 : -1;
   const targetDirection = targetConnectionSide === 'right' ? 1 : -1;
   
+  // First control point: extends horizontally from source for perpendicular exit
   const control1: Point = {
-    x: start.x + sourceDirection * controlDistance,
+    x: start.x + sourceDirection * adaptiveDistance,
     y: start.y
   };
   
+  // Second control point: positioned for perpendicular entry to target
+  // This creates a smooth curve that approaches the target node at 90 degrees
   const control2: Point = {
-    x: end.x + targetDirection * controlDistance,
+    x: end.x + targetDirection * adaptiveDistance,
     y: end.y
   };
   

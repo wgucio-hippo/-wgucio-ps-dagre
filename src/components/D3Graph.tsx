@@ -126,10 +126,10 @@ const D3Graph: React.FC<D3GraphProps> = ({
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setGraph({
       rankdir: layoutDirection, // Layout direction
-      nodesep: 50,   // Horizontal separation between nodes
-      ranksep: 80,   // Vertical separation between ranks
-      marginx: 20,
-      marginy: 20
+      nodesep: 80,   // Increased horizontal separation between nodes
+      ranksep: 120,  // Increased vertical separation between ranks
+      marginx: 30,   // Increased margins
+      marginy: 30
     });
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
