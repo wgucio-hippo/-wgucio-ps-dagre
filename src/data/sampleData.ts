@@ -74,17 +74,17 @@ export const sampleGraphData: GraphData =
 {
   "nodes": [
     {"id": "7a74459d-a75d-4f9e-896f-b86f9d9f8f15", "name": "POD - Underwriting Restriction - Underwriter", "type": "permissionSet", group: 1},
-    {"id": "722a1b79-0f77-445e-8d79-3bfe9992e81b", "name": "POD - Underwriting Restriction - Underwriting Manager", "type": "permissionSet", group: 2},
-    {"id": "a7e812ca-d5bf-476c-a390-9e85896c0215", "name": "POD - Underwriting Restriction - Underwriting Leadership", "type": "permissionSet", group: 3},
-    {"id": "09b2265f-5034-4335-a62a-6fe551307650", "name": "POD - Underwriting Restriction - No Access", "type": "permissionSet", group: 4},
-    {"id": "POD-UNDERWRITING-BIND_RESTRICTIONS-VIEW", "name": "POD-UNDERWRITING-BIND_RESTRICTIONS-VIEW", "type": "control", group: 5},
-    {"id": "POD-UNDERWRITING-BIND_RESTRICTIONS-EDIT", "name": "POD-UNDERWRITING-BIND_RESTRICTIONS-EDIT", "type": "control", group: 6},
-    {"id": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-VIEW", "name": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-VIEW", "type": "control", group: 7},
-    {"id": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-EDIT", "name": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-EDIT", "type": "control", group: 8},
-    {"id": "POD-UNDERWRITING-STATE_MORATORIUMS-VIEW", "name": "POD-UNDERWRITING-STATE_MORATORIUMS-VIEW", "type": "control", group: 9},
-    {"id": "POD-UNDERWRITING-STATE_MORATORIUMS-EDIT", "name": "POD-UNDERWRITING-STATE_MORATORIUMS-EDIT", "type": "control", group: 10},
-    {"id": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-VIEW", "name": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-VIEW", "type": "control", group: 11},
-    {"id": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-EDIT", "name": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-EDIT", "type": "control", group: 12}
+    {"id": "722a1b79-0f77-445e-8d79-3bfe9992e81b", "name": "POD - Underwriting Restriction - Underwriting Manager", "type": "permissionSet", group: 1},
+    {"id": "a7e812ca-d5bf-476c-a390-9e85896c0215", "name": "POD - Underwriting Restriction - Underwriting Leadership", "type": "permissionSet", group: 1},
+    {"id": "09b2265f-5034-4335-a62a-6fe551307650", "name": "POD - Underwriting Restriction - No Access", "type": "permissionSet", group: 1},
+    {"id": "POD-UNDERWRITING-BIND_RESTRICTIONS-VIEW", "name": "POD-UNDERWRITING-BIND_RESTRICTIONS-VIEW", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-BIND_RESTRICTIONS-EDIT", "name": "POD-UNDERWRITING-BIND_RESTRICTIONS-EDIT", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-VIEW", "name": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-VIEW", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-EDIT", "name": "POD-UNDERWRITING-CAPACITY_RESTRICTIONS-EDIT", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-STATE_MORATORIUMS-VIEW", "name": "POD-UNDERWRITING-STATE_MORATORIUMS-VIEW", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-STATE_MORATORIUMS-EDIT", "name": "POD-UNDERWRITING-STATE_MORATORIUMS-EDIT", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-VIEW", "name": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-VIEW", "type": "control", group: 2},
+    {"id": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-EDIT", "name": "POD-UNDERWRITING-UNDERWRITER_RESTRICTIONS-EDIT", "type": "control", group: 2}
   ],
   "edges": [
     {"source": "7a74459d-a75d-4f9e-896f-b86f9d9f8f15", "target": "POD-UNDERWRITING-BIND_RESTRICTIONS-VIEW", "access": "DENY"},

@@ -42,8 +42,8 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
       <div
         className="node-title"
         style={{
-          fontSize: '14px',
-          fontWeight: 'bold',
+          fontSize: '8px',
+          // fontWeight: 'bold',
           color: '#fff',
           textAlign: 'center',
           marginBottom: '4px',
@@ -56,24 +56,6 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
       >
         {node.name}
       </div>
-      
-      <div
-        className="node-group"
-        style={{
-          fontSize: '12px',
-          color: '#fff',
-          opacity: 0.8,
-          textAlign: 'center',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          width: '100%'
-        }}
-        title={`Group ${node.group}`}
-      >
-        Group {node.group}
-      </div>
-      
       {/* Additional content area with overflow handling */}
       <div
         className="node-content"
@@ -90,6 +72,9 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
         {/* You can add more content here that will scroll if it overflows */}
         <div style={{ padding: '2px' }}>
           ID: {node.id}
+        </div>
+        <div style={{ padding: '2px', fontWeight: 'bold' }}>
+          Type: {node.type}
         </div>
       </div>
     </div>
