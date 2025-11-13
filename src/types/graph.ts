@@ -6,6 +6,7 @@ export interface GraphNode {
   y?: number;
   fx?: number | null;
   fy?: number | null;
+  type: string;
 }
 
 export interface PositionedGraphNode extends GraphNode {
@@ -16,12 +17,12 @@ export interface PositionedGraphNode extends GraphNode {
 export interface GraphLink {
   source: string | GraphNode;
   target: string | GraphNode;
-  value: number;
+  access: string;
 }
 
 export interface GraphData {
   nodes: GraphNode[];
-  links: GraphLink[];
+  edges: GraphLink[];
 }
 
 export {};

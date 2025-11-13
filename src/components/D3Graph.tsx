@@ -64,7 +64,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
     });
 
     // Add edges to Dagre graph
-    data.links.forEach(link => {
+    data.edges.forEach(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       dagreGraph.setEdge(sourceId, targetId);
@@ -90,11 +90,11 @@ const D3Graph: React.FC<D3GraphProps> = ({
     const link = svgGroup.append("g")
       .attr("class", "links")
       .selectAll("line")
-      .data(data.links)
+      .data(data.edges)
       .enter().append("line")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
-      .attr("stroke-width", (d) => Math.sqrt(d.value) * 2)
+      .attr("stroke", (d) => d.access.toLowerCase() === 'allow' ? 'blue' : 'red')
+      .attr("stroke-opacity", 1)
+      .attr("stroke-width", 2)
       .attr("x1", (d) => {
         const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
         const targetId = typeof d.target === 'string' ? d.target : d.target.id;
