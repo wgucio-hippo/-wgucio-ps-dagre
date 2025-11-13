@@ -4,6 +4,7 @@ import * as d3 from 'd3';
 import * as dagre from 'dagre';
 import { GraphData, PositionedGraphNode } from '../types/graph';
 import GraphNode from './GraphNode';
+import { generateOptimizedCurve, bezierCurveToPath, Point } from '../utils/edgeUtils';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 100;
@@ -38,6 +39,33 @@ const D3Graph: React.FC<D3GraphProps> = ({
     d3.select(svgRef.current).selectAll("*").remove();
 
     const svg = d3.select(svgRef.current);
+    
+    // Add arrow markers for directed edges
+    const defs = svg.append("defs");
+    
+    defs.append("marker")
+      .attr("id", "arrowhead-allow")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 8)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "blue");
+    
+    defs.append("marker")
+      .attr("id", "arrowhead-deny")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 8)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "red");
     
     // Create main group for zoom/pan transformations
     const svgGroup = svg.append("g");
@@ -108,47 +136,57 @@ const D3Graph: React.FC<D3GraphProps> = ({
       
       return {
         ...edge,
-        sourceConnectionSide: sourceX < targetX ? 'right' : 'left',
-        targetConnectionSide: sourceX < targetX ? 'left' : 'right'
+        sourceConnectionSide: (sourceX < targetX ? 'right' : 'left') as 'left' | 'right',
+        targetConnectionSide: (sourceX < targetX ? 'left' : 'right') as 'left' | 'right'
       };
     });
 
-    // Create links with calculated positions
+    // Create curved links with collision avoidance
     const link = svgGroup.append("g")
       .attr("class", "links")
-      .selectAll("line")
+      .selectAll("path")
       .data(edgeConnections)
-      .enter().append("line")
+      .enter().append("path")
       .attr("stroke", (d) => d.access.toLowerCase() === 'allow' ? 'blue' : 'red')
       .attr("stroke-opacity", 1)
       .attr("stroke-width", 2)
-      .attr("x1", (d) => {
+      .attr("fill", "none")
+      .attr("marker-end", (d) => d.access.toLowerCase() === 'allow' ? 'url(#arrowhead-allow)' : 'url(#arrowhead-deny)')
+      .attr("d", (d) => {
         const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
-        const sourceNode = layoutNodes.find(n => n.id === sourceId);
-        const sourceX = (sourceNode?.x || 0);
-
-        return d.sourceConnectionSide === 'right' 
-          ? sourceX + NODE_WIDTH / 2 
-          : sourceX - NODE_WIDTH / 2;
-      })
-      .attr("y1", (d) => {
-        const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
-        const sourceNode = layoutNodes.find(n => n.id === sourceId);
-        return (sourceNode?.y || 0);
-      })
-      .attr("x2", (d) => {
         const targetId = typeof d.target === 'string' ? d.target : d.target.id;
+        const sourceNode = layoutNodes.find(n => n.id === sourceId);
         const targetNode = layoutNodes.find(n => n.id === targetId);
-        const targetX = (targetNode?.x || 0);
 
-        return d.targetConnectionSide === 'right' 
-          ? targetX + NODE_WIDTH / 2 
-          : targetX - NODE_WIDTH / 2;
-      })
-      .attr("y2", (d) => {
-        const targetId = typeof d.target === 'string' ? d.target : d.target.id;
-        const targetNode = layoutNodes.find(n => n.id === targetId);
-        return targetNode?.y || 0;
+        if (!sourceNode || !targetNode) return '';
+
+        const start: Point = {
+          x: d.sourceConnectionSide === 'right' 
+            ? sourceNode.x + NODE_WIDTH / 2 
+            : sourceNode.x - NODE_WIDTH / 2,
+          y: sourceNode.y
+        };
+
+        const end: Point = {
+          x: d.targetConnectionSide === 'right' 
+            ? targetNode.x + NODE_WIDTH / 2 
+            : targetNode.x - NODE_WIDTH / 2,
+          y: targetNode.y
+        };
+
+        const curve = generateOptimizedCurve(
+          start,
+          end,
+          d.sourceConnectionSide,
+          d.targetConnectionSide,
+          layoutNodes,
+          NODE_WIDTH,
+          NODE_HEIGHT,
+          sourceId,
+          targetId
+        );
+
+        return bezierCurveToPath(curve);
       });
 
     // Create nodes with React components using foreignObject
@@ -231,29 +269,46 @@ const D3Graph: React.FC<D3GraphProps> = ({
         layoutNode.y = event.y;
       }
       
-      // Update connected links
+      // Update connected curved links
       link.each(function(linkData) {
         const sourceId = typeof linkData.source === 'string' ? linkData.source : linkData.source.id;
         const targetId = typeof linkData.target === 'string' ? linkData.target : linkData.target.id;
         
-        // Get current positions - use dragged position for the current node, layoutNodes for others
-        const sourceX = sourceId === d.id ? event.x : (layoutNodes.find(n => n.id === sourceId)?.x || 0);
-        const sourceY = sourceId === d.id ? event.y : (layoutNodes.find(n => n.id === sourceId)?.y || 0);
-        const targetX = targetId === d.id ? event.x : (layoutNodes.find(n => n.id === targetId)?.x || 0);
-        const targetY = targetId === d.id ? event.y : (layoutNodes.find(n => n.id === targetId)?.y || 0);
+        // Only update if this link is connected to the dragged node
+        if (sourceId === d.id || targetId === d.id) {
+          // Get current positions - use dragged position for the current node, layoutNodes for others
+          const sourceX = sourceId === d.id ? event.x : (layoutNodes.find(n => n.id === sourceId)?.x || 0);
+          const sourceY = sourceId === d.id ? event.y : (layoutNodes.find(n => n.id === sourceId)?.y || 0);
+          const targetX = targetId === d.id ? event.x : (layoutNodes.find(n => n.id === targetId)?.x || 0);
+          const targetY = targetId === d.id ? event.y : (layoutNodes.find(n => n.id === targetId)?.y || 0);
 
-        // Update link positions using stable connection sides
-        if (sourceId === d.id) {
-          const x = linkData.sourceConnectionSide === 'right' 
-            ? sourceX + NODE_WIDTH / 2 
-            : sourceX - NODE_WIDTH / 2;
-          d3.select(this).attr("x1", x).attr("y1", sourceY);
-        }
-        if (targetId === d.id) {
-          const x = linkData.targetConnectionSide === 'right' 
-            ? targetX + NODE_WIDTH / 2 
-            : targetX - NODE_WIDTH / 2;
-          d3.select(this).attr("x2", x).attr("y2", targetY);
+          const start: Point = {
+            x: linkData.sourceConnectionSide === 'right' 
+              ? sourceX + NODE_WIDTH / 2 
+              : sourceX - NODE_WIDTH / 2,
+            y: sourceY
+          };
+
+          const end: Point = {
+            x: linkData.targetConnectionSide === 'right' 
+              ? targetX + NODE_WIDTH / 2 
+              : targetX - NODE_WIDTH / 2,
+            y: targetY
+          };
+
+          const curve = generateOptimizedCurve(
+            start,
+            end,
+            linkData.sourceConnectionSide,
+            linkData.targetConnectionSide,
+            layoutNodes,
+            NODE_WIDTH,
+            NODE_HEIGHT,
+            sourceId,
+            targetId
+          );
+
+          d3.select(this).attr("d", bezierCurveToPath(curve));
         }
       });
     }
