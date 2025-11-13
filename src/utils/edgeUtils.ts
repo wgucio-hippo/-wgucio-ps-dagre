@@ -87,8 +87,8 @@ export function doesCurveIntersectNodes(
 }
 
 /**
- * Calculate control points for a Bézier curve between two nodes
- * Creates curves that approach nodes at approximately 90-degree angles
+ * Calculate control points for true 90-degree spline connections
+ * Creates multi-segment paths with perpendicular entry/exit
  */
 export function calculateControlPoints(
   start: Point,
@@ -97,36 +97,35 @@ export function calculateControlPoints(
   targetConnectionSide: 'left' | 'right',
   curvature: number = 0.3
 ): { control1: Point; control2: Point } {
-  const dx = end.x - start.x;
+  // Distance for perpendicular segments - creates true 90-degree exit/entry
+  const perpendicularDistance = 80;
   
-  // Enhanced control point calculation for 90-degree approaches with more spacing
-  const minControlDistance = 120; // Increased minimum distance for more space around nodes
-  const maxControlDistance = 200; // Increased maximum for wider curves when needed
-  
-  // Calculate adaptive control distance based on node separation
-  const horizontalDistance = Math.abs(dx);
-  
-  // Use larger control distance for nodes that are close vertically but far horizontally
-  const adaptiveDistance = Math.min(
-    Math.max(horizontalDistance * 0.5, minControlDistance), // Increased multiplier for more spacing
-    maxControlDistance
-  );
-  
-  // Calculate control point directions based on connection sides
+  // Calculate directions
   const sourceDirection = sourceConnectionSide === 'right' ? 1 : -1;
   const targetDirection = targetConnectionSide === 'right' ? 1 : -1;
   
-  // First control point: extends horizontally from source for perpendicular exit
-  const control1: Point = {
-    x: start.x + sourceDirection * adaptiveDistance,
+  // Create perpendicular exit point (90 degrees from source)
+  const exitPoint: Point = {
+    x: start.x + sourceDirection * perpendicularDistance,
     y: start.y
   };
   
-  // Second control point: positioned for perpendicular entry to target
-  // This creates a smooth curve that approaches the target node at 90 degrees
-  const control2: Point = {
-    x: end.x + targetDirection * adaptiveDistance,
+  // Create perpendicular entry point (90 degrees to target)
+  const entryPoint: Point = {
+    x: end.x + targetDirection * perpendicularDistance,
     y: end.y
+  };
+  
+  // Control points create smooth transition between perpendicular segments
+  // This creates an S-curve that maintains 90-degree angles at both ends
+  const control1: Point = {
+    x: exitPoint.x,
+    y: start.y + (end.y - start.y) * 0.3 // Gradual vertical transition
+  };
+  
+  const control2: Point = {
+    x: entryPoint.x,
+    y: end.y - (end.y - start.y) * 0.3 // Gradual vertical transition
   };
   
   return { control1, control2 };
@@ -217,9 +216,45 @@ function generateAlternativeRoute(
 }
 
 /**
- * Convert a Bézier curve to SVG path string
+ * Convert to 3-segment path where middle segment is vertical
  */
 export function bezierCurveToPath(curve: BezierCurve): string {
-  const { start, control1, control2, end } = curve;
-  return `M ${start.x} ${start.y} C ${control1.x} ${control1.y}, ${control2.x} ${control2.y}, ${end.x} ${end.y}`;
+  const { start, end } = curve;
+  
+  // For TRUE 3-segment path with vertical middle segment:
+  // We need exactly 2 intermediate points to create 3 segments
+  const middleX = (start.x + end.x) / 2;
+  
+  // We don't need intermediate points since we're calculating corners directly
+  
+  // Create path with rounded corners using quadratic curves
+  // Make corner radius proportional to segment lengths to avoid oversized corners
+  const horizontalLength1 = Math.abs(middleX - start.x);
+  const horizontalLength2 = Math.abs(end.x - middleX);
+  const verticalLength = Math.abs(end.y - start.y);
+  
+  // Use percentage of the shortest segment, with min/max bounds
+  const minSegment = Math.min(horizontalLength1, horizontalLength2, verticalLength);
+  const cornerRadius = Math.min(Math.max(minSegment * 0.3, 8), 20); // 30% of shortest segment, min 8px, max 20px
+  
+  // Determine directions for proper corner calculations
+  const goingDown = end.y > start.y;
+  const goingRight = end.x > middleX;
+  
+  // Calculate rounded corner points properly
+  // First corner: from horizontal to vertical
+  const corner1Start = { x: middleX - cornerRadius, y: start.y };
+  const corner1End = { x: middleX, y: start.y + (goingDown ? cornerRadius : -cornerRadius) };
+  
+  // Second corner: from vertical to horizontal  
+  const corner2Start = { x: middleX, y: end.y - (goingDown ? cornerRadius : -cornerRadius) };
+  const corner2End = { x: middleX + (goingRight ? cornerRadius : -cornerRadius), y: end.y };
+  
+  // Create path with properly calculated rounded corners
+  return `M ${start.x} ${start.y}
+          L ${corner1Start.x} ${corner1Start.y}
+          Q ${middleX} ${start.y} ${corner1End.x} ${corner1End.y}
+          L ${corner2Start.x} ${corner2Start.y}
+          Q ${middleX} ${end.y} ${corner2End.x} ${corner2End.y}
+          L ${end.x} ${end.y}`;
 }
