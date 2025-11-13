@@ -6,17 +6,24 @@ interface GraphNodeProps {
   width: number;
   height: number;
   color: string;
+  onClick?: (nodeId: string) => void;
 }
 
-const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color }) => {
+const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onClick }) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick?.(node.id);
+  };
+
   return (
     <div
       className="graph-node"
+      onClick={handleClick}
       style={{
         width: `${width}px`,
         height: `${height}px`,
         backgroundColor: color,
-        border: `2px solid ${color}`,
+        border: `3px solid ${color}`,
         borderRadius: '8px',
         display: 'flex',
         flexDirection: 'column',
@@ -26,7 +33,10 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color }) => 
         boxSizing: 'border-box',
         overflow: 'hidden',
         position: 'relative',
-        pointerEvents: 'none'
+        pointerEvents: 'auto',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}
     >
       <div
