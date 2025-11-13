@@ -97,8 +97,19 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .attr("stroke-width", (d) => Math.sqrt(d.value) * 2)
       .attr("x1", (d) => {
         const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
+        const targetId = typeof d.target === 'string' ? d.target : d.target.id;
         const sourceNode = layoutNodes.find(n => n.id === sourceId);
-        return (sourceNode?.x || 0);
+        const targetNode = layoutNodes.find(n => n.id === targetId);
+
+        const sourceX = (sourceNode?.x || 0);
+        const targetX = (targetNode?.x || 0)
+
+
+        if (sourceX < targetX) {
+          return sourceX + NODE_WIDTH / 2;
+        }
+
+        return sourceX - NODE_WIDTH / 2;
       })
       .attr("y1", (d) => {
         const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
@@ -106,9 +117,20 @@ const D3Graph: React.FC<D3GraphProps> = ({
         return (sourceNode?.y || 0);
       })
       .attr("x2", (d) => {
+         const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
         const targetId = typeof d.target === 'string' ? d.target : d.target.id;
+        const sourceNode = layoutNodes.find(n => n.id === sourceId);
         const targetNode = layoutNodes.find(n => n.id === targetId);
-        return targetNode?.x || 0;
+
+        const sourceX = (sourceNode?.x || 0);
+        const targetX = (targetNode?.x || 0)
+
+
+        if (sourceX < targetX) {
+          return targetX - NODE_WIDTH / 2;
+        }
+
+        return targetX + NODE_WIDTH / 2;
       })
       .attr("y2", (d) => {
         const targetId = typeof d.target === 'string' ? d.target : d.target.id;
@@ -134,13 +156,14 @@ const D3Graph: React.FC<D3GraphProps> = ({
     // node.append("circle")
     //   .attr("r", 20)
     node.append("rect")
-      .attr("x", -100)
-      .attr("y", -50)
-      .attr("width", 200)
-      .attr("height", 100)
-      .attr("fill", (d) => 'transparent')// color(d.group.toString()))
-      // .attr("stroke", "#fff")
-      .attr("stroke", "#000")
+      .attr("x", -(NODE_WIDTH / 2))
+      .attr("y", -(NODE_HEIGHT / 2))
+      .attr("width", NODE_WIDTH)
+      .attr("height", NODE_HEIGHT)
+      // .attr("fill", (d) => 'transparent')
+      .attr("fill", (d) => color(d.group.toString()))
+      .attr("stroke", (d) => color(d.group.toString()))
+      // .attr("stroke", "#000")
       .attr("stroke-width", 2);
 
     // Add labels to nodes
@@ -148,9 +171,10 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .text((d) => d.name)
       .attr("text-anchor", "middle")
       .attr("dy", ".35em")
-      .attr("font-size", "12px")
+      .attr("font-size", "1em")
+      .attr("font-weight", "bold")
       .attr("font-family", "Arial, sans-serif")
-      .attr("fill", "#333")
+      .attr("fill", "#fff")
       .attr("pointer-events", "none");
 
     // Add tooltips
@@ -174,12 +198,20 @@ const D3Graph: React.FC<D3GraphProps> = ({
       link.each(function(linkData) {
         const sourceId = typeof linkData.source === 'string' ? linkData.source : linkData.source.id;
         const targetId = typeof linkData.target === 'string' ? linkData.target : linkData.target.id;
+        const sourceNode = layoutNodes.find(n => n.id === sourceId);
+        const targetNode = layoutNodes.find(n => n.id === targetId);
+
+        const sourceX = (sourceNode?.x || 0);
+        const targetX = (targetNode?.x || 0)
+
         
         if (sourceId === d.id) {
-          d3.select(this).attr("x1", d.x).attr("y1", d.y);
+          const x = sourceX < targetX ? sourceX + NODE_WIDTH / 2 : sourceX - NODE_WIDTH / 2;
+          d3.select(this).attr("x1", x).attr("y1", d.y);
         }
         if (targetId === d.id) {
-          d3.select(this).attr("x2", d.x).attr("y2", d.y);
+          const x = sourceX < targetX ? targetX - NODE_WIDTH / 2 : targetX + NODE_WIDTH / 2;
+          d3.select(this).attr("x2", x).attr("y2", d.y);
         }
       });
     }
