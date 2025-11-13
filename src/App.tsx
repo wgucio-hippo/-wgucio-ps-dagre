@@ -1,19 +1,32 @@
 import React from 'react';
-import D3Graph from './components/D3Graph';
-import { sampleGraphData } from './data/sampleData';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import ApiDataGraph from './components/ApiDataGraph';
 import './App.css';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
-    <div className="App">
-      <main className="App-main">
-        <D3Graph 
-          data={sampleGraphData} 
-          width="100%"
-          height={1080}
-        />
-      </main>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <div className="App">
+        <main className="App-main">
+          <ApiDataGraph 
+            width="100%"
+            height={1080}
+          />
+        </main>
+      </div>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 
