@@ -327,10 +327,19 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .data(edgeConnections)
       .enter().append("path")
       .attr("stroke", (d) => d.access.toLowerCase() === 'allow' ? 'blue' : 'red')
-      .attr("stroke-opacity", 1) // Start with full opacity, selection effect will handle changes
+      .attr("stroke-opacity", 1) // Start with full opacity, show all edges initially
       .attr("stroke-width", 2)
       .attr("fill", "none")
       .attr("marker-end", (d) => d.access.toLowerCase() === 'allow' ? 'url(#arrowhead-allow)' : 'url(#arrowhead-deny)')
+      // Store the source and target IDs directly on the DOM element for reliable selection
+      .attr("data-source-id", (d) => {
+        const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
+        return sourceId;
+      })
+      .attr("data-target-id", (d) => {
+        const targetId = typeof d.target === 'string' ? d.target : d.target.id;
+        return targetId;
+      })
       .attr("d", (d) => {
         const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
         const targetId = typeof d.target === 'string' ? d.target : d.target.id;
@@ -548,26 +557,35 @@ const D3Graph: React.FC<D3GraphProps> = ({
       try {
         const svg = d3.select(svgRef.current);
         
-        // Update edge opacities based on selection
+        // Update edge opacities based on selection - use data attributes for reliable ID matching
         svg.selectAll('.links path')
-          .attr('stroke-opacity', function(d: any) {
-            if (!selectedNodeId) return 1;
+          .attr('stroke-opacity', function() {
+            if (!selectedNodeId) return 1; // Show all edges when no selection
             
-            const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
-            const targetId = typeof d.target === 'string' ? d.target : d.target.id;
+            // Get IDs from data attributes stored on the DOM element
+            const sourceId = d3.select(this).attr('data-source-id');
+            const targetId = d3.select(this).attr('data-target-id');
             
-            // Highlight edges both FROM and TO the selected node
             const isConnected = sourceId === selectedNodeId || targetId === selectedNodeId;
-            return isConnected ? 1 : 0.05;
+            
+            // Debug logging only for connected edges to reduce noise
+            if (isConnected) {
+              console.log('Connected edge found:', { 
+                sourceId, targetId, selectedNodeId
+              });
+            }
+            
+            return isConnected ? 1 : 0; // Highlight connected edges, hide others
           })
-          .attr('marker-end', function(d: any) {
+          .attr('marker-end', function(d: any, i: number) {
             if (!selectedNodeId) {
               // No selection - use normal markers
               return d.access.toLowerCase() === 'allow' ? 'url(#arrowhead-allow)' : 'url(#arrowhead-deny)';
             }
             
-            const sourceId = typeof d.source === 'string' ? d.source : d.source.id;
-            const targetId = typeof d.target === 'string' ? d.target : d.target.id;
+            // Use data attributes for consistent ID matching
+            const sourceId = d3.select(this).attr('data-source-id');
+            const targetId = d3.select(this).attr('data-target-id');
             const isConnected = sourceId === selectedNodeId || targetId === selectedNodeId;
             
             if (isConnected) {
@@ -626,7 +644,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
     }, 10); // Small delay to ensure DOM is ready
 
     return () => clearTimeout(timeoutId);
-  }, [selectedNodeId]);
+  }, [selectedNodeId, data.edges]);
 
   const resetZoom = () => {
     if (!svgRef.current || !zoomRef.current) return;
