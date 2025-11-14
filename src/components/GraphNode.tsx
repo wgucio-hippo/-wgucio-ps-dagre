@@ -106,7 +106,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
       return <RoleIcon />;
     } else if (node.type === 'permissionSet') {
       return <PermissionIcon />;
-    } else if (node.type === 'control') {
+    } else if (node.type === 'permission') {
       return <PasskeyIcon />;
     }
     return <RoleIcon />; // Default to role icon
@@ -148,7 +148,6 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
         style={{
           fontSize: '8px',
           color: '#333',
-          fontWeight: 700,
           // textAlign: 'center',
           marginBottom: '4px',
           // overflow: 'hidden',
@@ -173,8 +172,29 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
             <span>{getNodeIcon()}</span><span>{getToggleIcon()}</span>
           </div>
           <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
-            {node.name}
+            {node.id}
           </div>
+          {node.type === 'permission' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left', marginTop: '8px' }}>
+            System: <span style={{ fontWeight: 'bold' }}>{node.system}</span>
+          </div>}
+          {node.type === 'permission' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
+            Domain: <span style={{ fontWeight: 'bold' }}>{node.domain}</span>
+          </div>}
+          {node.type === 'permission' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
+            Resource: <span style={{ fontWeight: 'bold' }}>{node.resource}</span>
+          </div>}
+          {node.type === 'permission' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
+            Action: <span style={{ fontWeight: 'bold' }}>{node.action}</span>
+          </div>}
+          {node.type === 'permissionSet' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left', marginTop: '8px' }}>
+            System: <span style={{ fontWeight: 'bold' }}>{node.system}</span>
+          </div>}
+          {node.type === 'permissionSet' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
+            Domain: <span style={{ fontWeight: 'bold' }}>{node.domain}</span>
+          </div>}
+          {node.type === 'permissionSet' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
+            Set: <span style={{ fontWeight: 'bold' }}>{node.resource}</span>
+          </div>}
         </div>
       </div>
     </div>

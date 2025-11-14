@@ -7,6 +7,11 @@ interface PermissionGroup {
   type: string;
   group: number;
   enabled: boolean;
+  system?: string;
+  action?: string;
+  domain?: string;
+  resource?: string;
+  access?: string;
 }
 
 interface PermissionGroupEdge {
@@ -43,17 +48,21 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
     console.log(`Processing item ${index}:`, item);
     
     // Handle permission-control relationships (controlKey and permissionSetId/permissionSetName)
-    if (item.controlKey && (item.permissionSetId || item.permissionSetName)) {
-      const controlKeyId = item.controlKey;
-      const permissionSetId = item.permissionSetId || item.permissionSetName;
+    if (item.controlKey && item.permissionSetId) {
+      const controlKeyId = item.id;
+      const permissionSetId = item.permissionSetId;
       
       // Add controlKey as a node (if not already added)
       if (!nodeMap.has(controlKeyId)) {
         const controlNode: PermissionGroup = {
           id: controlKeyId,
-          name: item.controlKeyName || controlKeyId, // Use controlKeyName if available
-          type: 'control',
+          name: item.controlKey,
+          type: 'permission',
           enabled: item.enabled,
+          system: item.controlSystem,
+          action: item.controlAction,
+          domain: item.controlDomain,
+          resource: item.controlResource,
           group: 2 // Controls in group 2
         };
         nodes.push(controlNode);
@@ -65,9 +74,13 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
       if (!nodeMap.has(permissionSetId)) {
         const permissionNode: PermissionGroup = {
           id: permissionSetId,
-          name: item.permissionSetName || permissionSetId, // Use permissionSetName for display, ID for identification
+          name: item.permissionSetName, // Use permissionSetName for display, ID for identification
           type: 'permissionSet',
-          enabled: item.enabled,
+          enabled: item.permissionSetEnabled,
+          system: item.controlSystem,
+          action: item.controlAction,
+          domain: item.controlDomain,
+          resource: item.controlResource,
           group: 1 // Permission sets in group 1
         };
         nodes.push(permissionNode);
@@ -85,18 +98,26 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
       console.log(`Added permission-control edge:`, edge);
     }
     // Handle permission-group relationships (permissionSetId/permissionSetName and permissionGroupId/permissionGroupRole)
-    else if ((item.permissionSetId || item.permissionSetName) && (item.permissionGroupId || item.permissionGroupRole)) {
+    else if (item.permissionSetId && item.permissionGroupId) {
+        console.log('foo', item);
       const permissionSetId = item.permissionSetId || item.permissionSetName;
       const permissionGroupId = item.permissionGroupId || item.permissionGroupRole;
       
       // Add permissionSet as a node (if not already added)
       if (!nodeMap.has(permissionSetId)) {
+
+        const segments = item.permissionSetName.split('-');
+
         const permissionNode: PermissionGroup = {
           id: permissionSetId,
-          name: item.permissionSetName || permissionSetId,
+          name: item.permissionSetName,
           type: 'permissionSet',
-          enabled: item.enabled,
-          group: 1 // Permission sets in group 1
+          enabled: item.permissionSetEnabled,
+          group: 1,
+          system: segments[0],
+          domain: segments[1],
+          resource: segments[2],
+          action: segments[3],
         };
         nodes.push(permissionNode);
         nodeMap.set(permissionSetId, permissionNode);
@@ -107,9 +128,9 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
       if (!nodeMap.has(permissionGroupId)) {
         const groupNode: PermissionGroup = {
           id: permissionGroupId,
-          name: item.permissionGroupRoleName || item.permissionGroupRole || permissionGroupId, // Use name fields for display
+          name: item.permissionGroupRole,
           type: 'permissionGroup',
-          enabled: item.enabled,
+          enabled: item.permissionGroupEnabled,
           group: 3 // Permission groups in group 3
         };
         nodes.push(groupNode);

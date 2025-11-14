@@ -308,7 +308,6 @@ const D3Graph: React.FC<D3GraphProps> = ({
     }
 
     const color = (group: number) => {
-      console.log('foo', group)
       switch (group) {
         case 1: return '#0077B6';
         case 2: return '#023E8A';

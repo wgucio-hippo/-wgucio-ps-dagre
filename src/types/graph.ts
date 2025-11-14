@@ -8,6 +8,10 @@ export interface GraphNode {
   fy?: number | null;
   type: string;
   enabled?: boolean;
+  system?: string;
+  domain?: string;
+  resource?: string;
+  action?: string;
 }
 
 export interface PositionedGraphNode extends GraphNode {
