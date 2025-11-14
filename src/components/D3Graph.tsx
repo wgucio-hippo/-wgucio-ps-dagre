@@ -240,6 +240,65 @@ const D3Graph: React.FC<D3GraphProps> = ({
       y: n.y 
     })));
 
+    // Calculate bounding box of all nodes and center them in viewport
+    if (layoutNodes.length > 0) {
+      const minX = Math.min(...layoutNodes.map(n => n.x - NODE_WIDTH / 2));
+      const maxX = Math.max(...layoutNodes.map(n => n.x + NODE_WIDTH / 2));
+      const minY = Math.min(...layoutNodes.map(n => n.y - NODE_HEIGHT / 2));
+      const maxY = Math.max(...layoutNodes.map(n => n.y + NODE_HEIGHT / 2));
+      
+      const contentWidth = maxX - minX;
+      const contentHeight = maxY - minY;
+      const contentCenterX = (minX + maxX) / 2;
+      const contentCenterY = (minY + maxY) / 2;
+      
+      let scale, translateX, translateY;
+      
+      if (layoutAlgorithm === 'dagre') {
+        // Dagre: Use aggressive fitting with padding for hierarchical layouts
+        const padding = 20;
+        const paddedWidth = contentWidth + 2 * padding;
+        const paddedHeight = contentHeight + 2 * padding;
+        
+        const scaleX = (numericWidth * 0.9) / paddedWidth;
+        const scaleY = (numericHeight * 0.9) / paddedHeight;
+        scale = Math.min(scaleX, scaleY, 2.0);
+        
+        translateX = numericWidth / 2 - contentCenterX * scale;
+        translateY = numericHeight / 2 - contentCenterY * scale;
+      } else {
+        // Force-directed: More conservative fitting for grid layouts
+        const padding = 40;
+        const paddedWidth = contentWidth + 2 * padding;
+        const paddedHeight = contentHeight + 2 * padding;
+        
+        const scaleX = (numericWidth * 0.8) / paddedWidth; // Use 80% of viewport
+        const scaleY = (numericHeight * 0.8) / paddedHeight;
+        scale = Math.min(scaleX, scaleY, 1.2); // More conservative max zoom
+        
+        translateX = numericWidth / 2 - contentCenterX * scale;
+        translateY = numericHeight / 2 - contentCenterY * scale;
+      }
+      
+      console.log('Centering calculation:', {
+        layoutAlgorithm, numericWidth, numericHeight,
+        contentCenterX, contentCenterY,
+        scale, translateX, translateY
+      });
+      
+      const initialTransform = d3.zoomIdentity
+        .translate(translateX, translateY)
+        .scale(scale);
+      
+      svg.call(zoom.transform, initialTransform);
+      setTransform({ x: translateX, y: translateY, k: scale });
+    } else {
+      // If no nodes, center at origin
+      const centerTransform = d3.zoomIdentity.translate(numericWidth / 2, numericHeight / 2);
+      svg.call(zoom.transform, centerTransform);
+      setTransform({ x: numericWidth / 2, y: numericHeight / 2, k: 1 });
+    }
+
     // Create color scale for different groups
     const color = d3.scaleOrdinal(d3.schemeCategory10);
 
