@@ -126,6 +126,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
   const [layoutAlgorithm, setLayoutAlgorithm] = useState<'dagre' | 'force'>('force');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [layoutResetTrigger, setLayoutResetTrigger] = useState(0);
+  const isLayoutResetRef = useRef(false);
   const reactRootsRef = useRef<Map<string, Root>>(new Map());
 
   // Node click handler
@@ -283,15 +284,22 @@ const D3Graph: React.FC<D3GraphProps> = ({
       console.log('Centering calculation:', {
         layoutAlgorithm, numericWidth, numericHeight,
         contentCenterX, contentCenterY,
-        scale, translateX, translateY
+        scale, translateX, translateY,
+        isLayoutReset: isLayoutResetRef.current
       });
       
-      const initialTransform = d3.zoomIdentity
-        .translate(translateX, translateY)
-        .scale(scale);
+      // Only apply auto-fit zoom if this is not a layout reset
+      if (!isLayoutResetRef.current) {
+        const initialTransform = d3.zoomIdentity
+          .translate(translateX, translateY)
+          .scale(scale);
+        
+        svg.call(zoom.transform, initialTransform);
+        setTransform({ x: translateX, y: translateY, k: scale });
+      }
       
-      svg.call(zoom.transform, initialTransform);
-      setTransform({ x: translateX, y: translateY, k: scale });
+      // Reset the flag after processing
+      isLayoutResetRef.current = false;
     } else {
       // If no nodes, center at origin
       const centerTransform = d3.zoomIdentity.translate(numericWidth / 2, numericHeight / 2);
@@ -659,13 +667,11 @@ const D3Graph: React.FC<D3GraphProps> = ({
   };
 
   const resetLayout = () => {
-    // Reset zoom first
-    resetZoom();
-    
-    // Clear selection
-    setSelectedNodeId(null);
+    // Set flag to indicate this is a layout reset (preserve zoom)
+    isLayoutResetRef.current = true;
     
     // Trigger layout recalculation by incrementing the trigger
+    // Note: Preserving current node selection and zoom level
     setLayoutResetTrigger(prev => prev + 1);
   };
 
