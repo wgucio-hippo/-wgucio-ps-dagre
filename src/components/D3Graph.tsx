@@ -10,6 +10,104 @@ import './D3Graph.css';
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 100;
 
+// Dagre layout calculation
+const calculateDagreLayout = (data: GraphData, layoutDirection: 'TB' | 'LR' | 'BT' | 'RL'): PositionedGraphNode[] => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setGraph({
+    rankdir: layoutDirection,
+    nodesep: 80,   // Horizontal separation between nodes
+    ranksep: 120,  // Vertical separation between ranks
+    marginx: 30,   // Margins
+    marginy: 30
+  });
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  // Add nodes to Dagre graph
+  data.nodes.forEach(node => {
+    dagreGraph.setNode(node.id, { 
+      width: NODE_WIDTH, 
+      height: NODE_HEIGHT,
+      label: node.name 
+    });
+  });
+
+  // Add edges to Dagre graph
+  data.edges.forEach(link => {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    dagreGraph.setEdge(sourceId, targetId);
+  });
+
+  // Calculate layout
+  dagre.layout(dagreGraph);
+
+  // Apply Dagre positions to nodes
+  return data.nodes.map(node => {
+    const dagreNode = dagreGraph.node(node.id);
+    return {
+      ...node,
+      x: dagreNode?.x || 0,
+      y: dagreNode?.y || 0
+    };
+  });
+};
+
+// Force-directed layout calculation - simplified manual approach
+const calculateForceLayout = (data: GraphData, width: number, height: number): PositionedGraphNode[] => {
+  console.log('Force layout - manual positioning approach');
+  console.log('Input data:', { width, height, nodeCount: data.nodes.length, edgeCount: data.edges.length });
+  
+  const nodeCount = data.nodes.length;
+  if (nodeCount === 0) return [];
+  
+  // Calculate grid dimensions for spreading nodes - use more columns for better spacing
+  const cols = Math.ceil(Math.sqrt(nodeCount * 1.5)); // More columns to reduce overlap
+  const rows = Math.ceil(nodeCount / cols);
+  
+  // Calculate spacing with smaller margins but ensure minimum cell size
+  const marginX = width * 0.05;
+  const marginY = height * 0.05;
+  const availableWidth = width - 2 * marginX;
+  const availableHeight = height - 2 * marginY;
+  const cellWidth = Math.max(availableWidth / cols, NODE_WIDTH + 20); // Minimum cell width
+  const cellHeight = Math.max(availableHeight / rows, NODE_HEIGHT + 20); // Minimum cell height
+  
+  console.log('Grid layout:', { cols, rows, cellWidth, cellHeight });
+  
+  // Position nodes in a grid with some randomization
+  const nodes: PositionedGraphNode[] = data.nodes.map((node, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    
+    // Base grid position
+    const baseX = marginX + col * cellWidth + cellWidth / 2;
+    const baseY = marginY + row * cellHeight + cellHeight / 2;
+    
+    // Add minimal randomization to avoid perfect grid look
+    const randomOffsetX = (Math.random() - 0.5) * Math.min(cellWidth * 0.2, 30);
+    const randomOffsetY = (Math.random() - 0.5) * Math.min(cellHeight * 0.2, 30);
+    
+    const finalX = baseX + randomOffsetX;
+    const finalY = baseY + randomOffsetY;
+    
+    console.log(`Node ${index} (${node.id}): grid(${col},${row}) -> position(${Math.round(finalX)},${Math.round(finalY)})`);
+    
+    return {
+      ...node,
+      x: finalX,
+      y: finalY
+    };
+  });
+  
+  console.log('Final node positions sample:', nodes.slice(0, 3).map(n => ({ 
+    id: n.id, 
+    x: Math.round(n.x), 
+    y: Math.round(n.y) 
+  })));
+  
+  return nodes;
+};
+
 interface D3GraphProps {
   data: GraphData;
   width?: number | string;
@@ -24,6 +122,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
   const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR' | 'BT' | 'RL'>('LR');
+  const [layoutAlgorithm, setLayoutAlgorithm] = useState<'dagre' | 'force'>('force');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const reactRootsRef = useRef<Map<string, Root>>(new Map());
 
@@ -42,31 +141,16 @@ const D3Graph: React.FC<D3GraphProps> = ({
   useEffect(() => {
     if (!svgRef.current || !data) return;
 
-    // Capture current roots for cleanup
-    const currentRoots = new Map(reactRootsRef.current);
-
-    // Clean up previous React roots asynchronously to avoid race condition
-    if (currentRoots.size > 0) {
-      // Use setTimeout to defer cleanup until after current render cycle
-      setTimeout(() => {
-        currentRoots.forEach(root => {
-          try {
-            root.unmount();
-          } catch (error) {
-            console.warn('Error unmounting React root:', error);
-          }
-        });
-      }, 0);
-      // Clear the ref immediately
-      reactRootsRef.current.clear();
-    }
-
-    // Clear previous content
-    d3.select(svgRef.current).selectAll("*").remove();
-
     const svg = d3.select(svgRef.current);
     
-    // Add arrow markers for directed edges
+    // Clear previous content - let React handle root cleanup naturally
+    svg.selectAll("*").remove();
+    
+    // Clear the roots reference but don't manually unmount
+    // React will handle cleanup when DOM nodes are removed
+    reactRootsRef.current.clear();
+    
+    // Add arrow markers for directed edges (reuse svg variable)
     const defs = svg.append("defs");
     
     defs.append("marker")
@@ -134,45 +218,23 @@ const D3Graph: React.FC<D3GraphProps> = ({
 
     svg.call(zoom);
 
-    // Create Dagre graph for layout
-    const dagreGraph = new dagre.graphlib.Graph();
-    dagreGraph.setGraph({
-      rankdir: layoutDirection, // Layout direction
-      nodesep: 80,   // Increased horizontal separation between nodes
-      ranksep: 120,  // Increased vertical separation between ranks
-      marginx: 30,   // Increased margins
-      marginy: 30
-    });
-    dagreGraph.setDefaultEdgeLabel(() => ({}));
+    // Calculate layout based on selected algorithm
+    // Ensure width and height are numbers for layout calculations
+    const numericWidth = typeof width === 'string' ? 800 : width;
+    const numericHeight = typeof height === 'string' ? 600 : height;
+    
+    console.log('Layout dimensions:', { width, height, numericWidth, numericHeight });
+    
+    const layoutNodes: PositionedGraphNode[] = layoutAlgorithm === 'dagre' 
+      ? calculateDagreLayout(data, layoutDirection)
+      : calculateForceLayout(data, numericWidth, numericHeight);
 
-    // Add nodes to Dagre graph
-    data.nodes.forEach(node => {
-      dagreGraph.setNode(node.id, { 
-        width: NODE_WIDTH, 
-        height: NODE_HEIGHT,
-        label: node.name 
-      });
-    });
-
-    // Add edges to Dagre graph
-    data.edges.forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      dagreGraph.setEdge(sourceId, targetId);
-    });
-
-    // Calculate layout
-    dagre.layout(dagreGraph);
-
-    // Apply Dagre positions to nodes
-    const layoutNodes: PositionedGraphNode[] = data.nodes.map(node => {
-      const dagreNode = dagreGraph.node(node.id);
-      return {
-        ...node,
-        x: dagreNode?.x || 0,
-        y: dagreNode?.y || 0
-      };
-    });
+    console.log(`Layout algorithm: ${layoutAlgorithm}`);
+    console.log('Layout nodes after calculation:', layoutNodes.slice(0, 3).map(n => ({ 
+      id: n.id, 
+      x: n.x, 
+      y: n.y 
+    })));
 
     // Create color scale for different groups
     const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -249,7 +311,11 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .data(layoutNodes)
       .enter().append("g")
       .attr("class", "node")
-      .attr("transform", (d) => `translate(${d.x - NODE_WIDTH/2},${d.y - NODE_HEIGHT/2})`)
+      .attr("transform", (d) => {
+        const transform = `translate(${d.x - NODE_WIDTH/2},${d.y - NODE_HEIGHT/2})`;
+        console.log(`Node ${d.id} positioned at: x=${d.x}, y=${d.y}, transform=${transform}`);
+        return transform;
+      })
       .call(d3.drag<SVGGElement, PositionedGraphNode>()
         .on("start", dragstarted)
         .on("drag", dragged)
@@ -274,26 +340,34 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .attr("y", 0)
       .style("pointer-events", "all");
 
-    // Create React components inside foreignObject
+    // Create React components inside foreignObject with better cleanup tracking
     foreignObject.each(function(d) {
       const container = d3.select(this).append("xhtml:div")
         .style("width", "100%")
         .style("height", "100%")
         .node() as HTMLDivElement;
 
-      if (container) {
-        const root = createRoot(container);
-        reactRootsRef.current.set(d.id, root);
-        
-        root.render(
-          <GraphNode 
-            node={d} 
-            width={NODE_WIDTH} 
-            height={NODE_HEIGHT} 
-            color={color(d.group.toString())}
-            onClick={handleNodeClick}
-          />
-        );
+      if (container && container.parentNode) {
+        try {
+          // Only create root if container is properly attached to DOM
+          const root = createRoot(container);
+          reactRootsRef.current.set(d.id, root);
+          
+          // Store reference to container for safer cleanup
+          (root as any)._container = container;
+          
+          root.render(
+            <GraphNode 
+              node={d} 
+              width={NODE_WIDTH} 
+              height={NODE_HEIGHT} 
+              color={color(d.group.toString())}
+              onClick={handleNodeClick}
+            />
+          );
+        } catch (error) {
+          console.warn('Error creating React root for node:', d.id, error);
+        }
       }
     });
 
@@ -397,21 +471,12 @@ const D3Graph: React.FC<D3GraphProps> = ({
       nodeGroup.select("rect").style("cursor", "grab");
     }
 
-    // Cleanup function - capture current roots to avoid stale closure
-    const rootsToCleanup = new Map(reactRootsRef.current);
+    // Cleanup function - capture ref to avoid stale closure
+    const rootsRef = reactRootsRef.current;
     return () => {
-      // Defer cleanup to avoid race condition
-      setTimeout(() => {
-        rootsToCleanup.forEach(root => {
-          try {
-            root.unmount();
-          } catch (error) {
-            console.warn('Error unmounting React root during cleanup:', error);
-          }
-        });
-      }, 0);
+      rootsRef.clear();
     };
-  }, [data, width, height, layoutDirection, handleNodeClick]);
+  }, [data, width, height, layoutDirection, layoutAlgorithm, handleNodeClick]);
 
   // Separate effect to handle selection changes without full re-render
   useEffect(() => {
@@ -522,19 +587,33 @@ const D3Graph: React.FC<D3GraphProps> = ({
             Reset Zoom
           </button>
           <div className="layout-controls">
-            <label htmlFor="layout-select">Layout:</label>
+            <label htmlFor="algorithm-select">Algorithm:</label>
             <select 
-              id="layout-select"
-              value={layoutDirection} 
-              onChange={(e) => setLayoutDirection(e.target.value as 'TB' | 'LR' | 'BT' | 'RL')}
+              id="algorithm-select"
+              value={layoutAlgorithm} 
+              onChange={(e) => setLayoutAlgorithm(e.target.value as 'dagre' | 'force')}
               className="layout-select"
             >
-              <option value="TB">Top → Bottom</option>
-              <option value="LR">Left → Right</option>
-              <option value="BT">Bottom → Top</option>
-              <option value="RL">Right → Left</option>
+              <option value="dagre">Dagre (Hierarchical)</option>
+              <option value="force">Force-Directed</option>
             </select>
           </div>
+          {layoutAlgorithm === 'dagre' && (
+            <div className="layout-controls">
+              <label htmlFor="layout-select">Direction:</label>
+              <select 
+                id="layout-select"
+                value={layoutDirection} 
+                onChange={(e) => setLayoutDirection(e.target.value as 'TB' | 'LR' | 'BT' | 'RL')}
+                className="layout-select"
+              >
+                <option value="TB">Top → Bottom</option>
+                <option value="LR">Left → Right</option>
+                <option value="BT">Bottom → Top</option>
+                <option value="RL">Right → Left</option>
+              </select>
+            </div>
+          )}
         </div>
         <div className="zoom-info">
           Zoom: {transform.k.toFixed(2)}x | 
