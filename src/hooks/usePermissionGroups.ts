@@ -6,6 +6,7 @@ interface PermissionGroup {
   name: string;
   type: string;
   group: number;
+  enabled: boolean;
 }
 
 interface PermissionGroupEdge {
@@ -52,6 +53,7 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
           id: controlKeyId,
           name: item.controlKeyName || controlKeyId, // Use controlKeyName if available
           type: 'control',
+          enabled: item.enabled,
           group: 2 // Controls in group 2
         };
         nodes.push(controlNode);
@@ -65,6 +67,7 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
           id: permissionSetId,
           name: item.permissionSetName || permissionSetId, // Use permissionSetName for display, ID for identification
           type: 'permissionSet',
+          enabled: item.enabled,
           group: 1 // Permission sets in group 1
         };
         nodes.push(permissionNode);
@@ -92,6 +95,7 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
           id: permissionSetId,
           name: item.permissionSetName || permissionSetId,
           type: 'permissionSet',
+          enabled: item.enabled,
           group: 1 // Permission sets in group 1
         };
         nodes.push(permissionNode);
@@ -105,6 +109,7 @@ const transformItemsToGraphData = (items: any[]): PermissionGroupsResponse => {
           id: permissionGroupId,
           name: item.permissionGroupRoleName || item.permissionGroupRole || permissionGroupId, // Use name fields for display
           type: 'permissionGroup',
+          enabled: item.enabled,
           group: 3 // Permission groups in group 3
         };
         nodes.push(groupNode);

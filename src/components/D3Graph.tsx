@@ -166,7 +166,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "blue");
+      .attr("fill", "green");
     
     defs.append("marker")
       .attr("id", "arrowhead-deny")
@@ -191,7 +191,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "blue")
+      .attr("fill", "green")
       .attr("opacity", 0.05);
     
     defs.append("marker")
@@ -307,8 +307,15 @@ const D3Graph: React.FC<D3GraphProps> = ({
       setTransform({ x: numericWidth / 2, y: numericHeight / 2, k: 1 });
     }
 
-    // Create color scale for different groups
-    const color = d3.scaleOrdinal(d3.schemeCategory10);
+    const color = (group: number) => {
+      console.log('foo', group)
+      switch (group) {
+        case 1: return '#0077B6';
+        case 2: return '#023E8A';
+        case 3: return '#0099ecff';
+        default: return '#90E0EF';
+      }
+    }
 
     // Calculate edge connections based on layout algorithm
     const edgeConnections = data.edges.map(edge => {
@@ -334,7 +341,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .selectAll("path")
       .data(edgeConnections)
       .enter().append("path")
-      .attr("stroke", (d) => d.access.toLowerCase() === 'allow' ? 'blue' : 'red')
+      .attr("stroke", (d) => d.access.toLowerCase() === 'allow' ? 'green' : 'red')
       .attr("stroke-opacity", 1) // Start with full opacity, show all edges initially
       .attr("stroke-width", 2)
       .attr("fill", "none")
@@ -443,7 +450,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
               node={d} 
               width={NODE_WIDTH} 
               height={NODE_HEIGHT} 
-              color={color(d.group.toString())}
+              color={color(d.group)}
               onClick={handleNodeClick}
             />
           );

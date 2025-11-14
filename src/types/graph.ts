@@ -7,6 +7,7 @@ export interface GraphNode {
   fx?: number | null;
   fy?: number | null;
   type: string;
+  enabled?: boolean;
 }
 
 export interface PositionedGraphNode extends GraphNode {

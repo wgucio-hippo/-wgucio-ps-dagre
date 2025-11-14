@@ -1,24 +1,25 @@
 /* Node selection styles */
 .node.selected .graph-node {
-  border-color: #fff !important;
-  transform: scale(1.05) !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  border: solid 2px #000 !important;
+  /* transform: scale(1.05) !important; */
+  /* box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; */
 }
 
 .node.connected .graph-node {
-  border-color: #ffeb3b !important;
-  transform: scale(1.02) !important;
-  box-shadow: 0 3px 8px rgba(255,235,59,0.4) !important;
+  /* border-color: #ffeb3b !important; */
+  /* transform: scale(1.02) !important; */
+  /* box-shadow: 0 3px 8px rgba(255,235,59,0.4) !important; */
 }
 
 .node.unselected .graph-node {
   opacity: 0.05 !important;
+  /* border: solid 1px transparent; */
 }
 
 /* Add hover effect for unselected nodes to make them more discoverable */
 .node.unselected .graph-node:hover {
   opacity: 0.3 !important;
-  transform: scale(1.01) !important;
+  /* transform: scale(1.01) !important; */
 }
 
 /* Ensure transitions work */

@@ -66,6 +66,40 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
     </svg>
   );
 
+  // Material Icons SVG for toggle_on (enabled state)
+  const ToggleOnIcon = () => (
+    <svg 
+      width="12" 
+      height="12" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ marginLeft: '4px', flexShrink: 0 }}
+    >
+      <path 
+        d="M17,7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7M17,15A3,3 0 0,1 14,12A3,3 0 0,1 17,9A3,3 0 0,1 20,12A3,3 0 0,1 17,15Z" 
+        fill="currentColor"
+      />
+    </svg>
+  );
+
+  // Material Icons SVG for toggle_off (disabled state)
+  const ToggleOffIcon = () => (
+    <svg 
+      width="12" 
+      height="12" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ marginLeft: '4px', flexShrink: 0, opacity: 0.5 }}
+    >
+      <path 
+        d="M17,7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7M7,15A3,3 0 0,1 4,12A3,3 0 0,1 7,9A3,3 0 0,1 10,12A3,3 0 0,1 7,15Z" 
+        fill="currentColor"
+      />
+    </svg>
+  );
+
   // Choose icon based on node type
   const getNodeIcon = () => {
     if (node.type === 'permissionGroup') {
@@ -78,6 +112,12 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
     return <RoleIcon />; // Default to role icon
   };
 
+  // Get toggle icon based on enabled state
+  const getToggleIcon = () => {
+    if (node.enabled === undefined) return null; // No toggle if enabled state is not defined
+    return node.enabled ? <ToggleOnIcon /> : <ToggleOffIcon />;
+  };
+
   return (
     <div
       className="graph-node"
@@ -85,14 +125,15 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
       style={{
         width: `${width}px`,
         height: `${height}px`,
-        backgroundColor: color,
-        border: `3px solid ${color}`,
+        // backgroundColor: color,
+        background: '#F0EFEB',
+        border: `2px solid ${color}`,
         borderRadius: '8px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '8px',
+        padding: '2px',
         boxSizing: 'border-box',
         overflow: 'hidden',
         position: 'relative',
@@ -106,8 +147,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
         className="node-title"
         style={{
           fontSize: '8px',
-          // fontWeight: 'bold',
-          color: '#fff',
+          color: '#000',
           textAlign: 'center',
           marginBottom: '4px',
           overflow: 'hidden',
@@ -115,32 +155,17 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
           whiteSpace: 'nowrap',
           width: '100%',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          alignItems: 'start',
+          justifyContent: 'flex-start',
+          flexDirection: 'column'
         }}
         title={node.name}
       >
-        {getNodeIcon()}
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div>
+          <span>{getNodeIcon()}</span><span>{getToggleIcon()}</span>
+        </div>
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', width: '99%' }}>
           {node.name}
-        </span>
-      </div>
-      {/* Additional content area with overflow handling */}
-      <div
-        className="node-content"
-        style={{
-          flex: 1,
-          width: '100%',
-          marginTop: '4px',
-          overflow: 'auto',
-          fontSize: '10px',
-          color: '#fff',
-          opacity: 0.7
-        }}
-      >
-        {/* You can add more content here that will scroll if it overflows */}
-        <div style={{ padding: '2px' }}>
-          ID: {node.id}
         </div>
       </div>
     </div>
