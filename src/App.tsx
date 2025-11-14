@@ -1,7 +1,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import ApiDataGraph from './components/ApiDataGraph';
+import FilteredApiDataGraph from './components/FilteredApiDataGraph';
 import './App.css';
 
 // Create a client
@@ -19,7 +19,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="App">
         <main className="App-main">
-          <ApiDataGraph 
+          <FilteredApiDataGraph 
             width="100%"
             height={1080}
           />

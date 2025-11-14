@@ -43,11 +43,23 @@ const D3Graph: React.FC<D3GraphProps> = ({
     if (!svgRef.current || !data) return;
 
     // Capture current roots for cleanup
-    const currentRoots = reactRootsRef.current;
+    const currentRoots = new Map(reactRootsRef.current);
 
-    // Clean up previous React roots
-    currentRoots.forEach(root => root.unmount());
-    currentRoots.clear();
+    // Clean up previous React roots asynchronously to avoid race condition
+    if (currentRoots.size > 0) {
+      // Use setTimeout to defer cleanup until after current render cycle
+      setTimeout(() => {
+        currentRoots.forEach(root => {
+          try {
+            root.unmount();
+          } catch (error) {
+            console.warn('Error unmounting React root:', error);
+          }
+        });
+      }, 0);
+      // Clear the ref immediately
+      reactRootsRef.current.clear();
+    }
 
     // Clear previous content
     d3.select(svgRef.current).selectAll("*").remove();
@@ -385,10 +397,19 @@ const D3Graph: React.FC<D3GraphProps> = ({
       nodeGroup.select("rect").style("cursor", "grab");
     }
 
-    // Cleanup function
+    // Cleanup function - capture current roots to avoid stale closure
+    const rootsToCleanup = new Map(reactRootsRef.current);
     return () => {
-      currentRoots.forEach(root => root.unmount());
-      currentRoots.clear();
+      // Defer cleanup to avoid race condition
+      setTimeout(() => {
+        rootsToCleanup.forEach(root => {
+          try {
+            root.unmount();
+          } catch (error) {
+            console.warn('Error unmounting React root during cleanup:', error);
+          }
+        });
+      }, 0);
     };
   }, [data, width, height, layoutDirection, handleNodeClick]);
 
