@@ -120,10 +120,12 @@ const D3Graph: React.FC<D3GraphProps> = ({
   height = 600 
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
   const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR' | 'BT' | 'RL'>('LR');
   const [layoutAlgorithm, setLayoutAlgorithm] = useState<'dagre' | 'force'>('force');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [layoutResetTrigger, setLayoutResetTrigger] = useState(0);
   const reactRootsRef = useRef<Map<string, Root>>(new Map());
 
   // Node click handler
@@ -216,6 +218,8 @@ const D3Graph: React.FC<D3GraphProps> = ({
         svgGroup.attr("transform", event.transform);
       });
 
+    // Store zoom behavior in ref for reset function
+    zoomRef.current = zoom;
     svg.call(zoom);
 
     // Calculate layout based on selected algorithm
@@ -239,13 +243,14 @@ const D3Graph: React.FC<D3GraphProps> = ({
     // Create color scale for different groups
     const color = d3.scaleOrdinal(d3.schemeCategory10);
 
-    // Pre-calculate stable edge connection sides based on initial layout
+    // Calculate edge connections based on layout algorithm
     const edgeConnections = data.edges.map(edge => {
       const sourceId = typeof edge.source === 'string' ? edge.source : edge.source.id;
       const targetId = typeof edge.target === 'string' ? edge.target : edge.target.id;
       const sourceNode = layoutNodes.find(n => n.id === sourceId);
       const targetNode = layoutNodes.find(n => n.id === targetId);
       
+      // Use consistent left/right logic for both layouts based on relative positions
       const sourceX = sourceNode?.x || 0;
       const targetX = targetNode?.x || 0;
       
@@ -338,13 +343,14 @@ const D3Graph: React.FC<D3GraphProps> = ({
       .attr("height", NODE_HEIGHT)
       .attr("x", 0)
       .attr("y", 0)
-      .style("pointer-events", "all");
+      .style("pointer-events", "none"); // Disable pointer events on foreignObject itself
 
     // Create React components inside foreignObject with better cleanup tracking
     foreignObject.each(function(d) {
       const container = d3.select(this).append("xhtml:div")
         .style("width", "100%")
         .style("height", "100%")
+        .style("pointer-events", "auto") // Enable pointer events for React content
         .node() as HTMLDivElement;
 
       if (container && container.parentNode) {
@@ -373,29 +379,30 @@ const D3Graph: React.FC<D3GraphProps> = ({
 
     // Drag functions for repositioning nodes
     function dragstarted(event: d3.D3DragEvent<SVGGElement, PositionedGraphNode, PositionedGraphNode>, d: PositionedGraphNode) {
-      const target = event.sourceEvent?.target;
+      const target = event.sourceEvent?.target as Element;
       if (!target) return;
       
-      // Find the node group - it might be the target itself or a parent
-      let nodeGroup = d3.select(target);
-      if (!nodeGroup.classed('node')) {
-        nodeGroup = d3.select(target.closest('.node') || target.parentNode);
+      // Prevent dragging if the click originated from React content (div elements)
+      if (target.tagName === 'DIV' || target.closest('div')) {
+        event.sourceEvent?.stopPropagation();
+        return;
       }
       
+      // Find the node group by data ID - more reliable than using event target
+      const nodeGroup = svgGroup.selectAll('.node').filter((nodeData: any) => nodeData.id === d.id);
+      
       nodeGroup.raise();
-      // Change cursor to grabbing during drag
+      // Change cursor to grabbing during drag and set on the entire SVG to maintain cursor during drag
       nodeGroup.select("rect").style("cursor", "grabbing");
+      svg.style("cursor", "grabbing");
     }
 
     function dragged(event: d3.D3DragEvent<SVGGElement, PositionedGraphNode, PositionedGraphNode>, d: PositionedGraphNode) {
-      const target = event.sourceEvent?.target;
-      if (!target) return;
+      // Use the node data directly instead of trying to find the element
+      // This is more reliable as the drag behavior maintains the connection to the data
       
-      // Find the node group - it might be the target itself or a parent
-      let nodeGroup = d3.select(target);
-      if (!nodeGroup.classed('node')) {
-        nodeGroup = d3.select(target.closest('.node') || target.parentNode);
-      }
+      // Find the node group by data ID - more reliable than using event target
+      const nodeGroup = svgGroup.selectAll('.node').filter((nodeData: any) => nodeData.id === d.id);
       
       // event.x and event.y are already in the correct coordinate system (svgGroup's coordinate space)
       // since the drag behavior is applied to elements within the transformed svgGroup
@@ -458,17 +465,12 @@ const D3Graph: React.FC<D3GraphProps> = ({
     }
 
     function dragended(event: d3.D3DragEvent<SVGGElement, PositionedGraphNode, PositionedGraphNode>, d: PositionedGraphNode) {
-      const target = event.sourceEvent?.target;
-      if (!target) return;
+      // Find the node group by data ID - more reliable than using event target
+      const nodeGroup = svgGroup.selectAll('.node').filter((nodeData: any) => nodeData.id === d.id);
       
-      // Find the node group - it might be the target itself or a parent
-      let nodeGroup = d3.select(target);
-      if (!nodeGroup.classed('node')) {
-        nodeGroup = d3.select(target.closest('.node') || target.parentNode);
-      }
-      
-      // Restore cursor to grab
+      // Restore cursor to grab on the node and reset SVG cursor
       nodeGroup.select("rect").style("cursor", "grab");
+      svg.style("cursor", "grab");
     }
 
     // Cleanup function - capture ref to avoid stale closure
@@ -476,7 +478,7 @@ const D3Graph: React.FC<D3GraphProps> = ({
     return () => {
       rootsRef.clear();
     };
-  }, [data, width, height, layoutDirection, layoutAlgorithm, handleNodeClick]);
+  }, [data, width, height, layoutDirection, layoutAlgorithm, handleNodeClick, layoutResetTrigger]);
 
   // Separate effect to handle selection changes without full re-render
   useEffect(() => {
@@ -568,15 +570,26 @@ const D3Graph: React.FC<D3GraphProps> = ({
   }, [selectedNodeId]);
 
   const resetZoom = () => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !zoomRef.current) return;
     
     const svg = d3.select(svgRef.current);
     svg.transition()
       .duration(750)
       .call(
-        d3.zoom<SVGSVGElement, unknown>().transform,
+        zoomRef.current.transform,
         d3.zoomIdentity
       );
+  };
+
+  const resetLayout = () => {
+    // Reset zoom first
+    resetZoom();
+    
+    // Clear selection
+    setSelectedNodeId(null);
+    
+    // Trigger layout recalculation by incrementing the trigger
+    setLayoutResetTrigger(prev => prev + 1);
   };
 
   return (
@@ -585,6 +598,9 @@ const D3Graph: React.FC<D3GraphProps> = ({
         <div className="control-group">
           <button onClick={resetZoom} className="reset-button">
             Reset Zoom
+          </button>
+          <button onClick={resetLayout} className="reset-button">
+            Reset Layout
           </button>
           <div className="layout-controls">
             <label htmlFor="algorithm-select">Algorithm:</label>

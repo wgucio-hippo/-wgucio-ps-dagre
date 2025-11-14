@@ -93,39 +93,38 @@ export function doesCurveIntersectNodes(
 export function calculateControlPoints(
   start: Point,
   end: Point,
-  sourceConnectionSide: 'left' | 'right',
-  targetConnectionSide: 'left' | 'right',
+  sourceConnectionSide: 'left' | 'right' | 'center',
+  targetConnectionSide: 'left' | 'right' | 'center',
   curvature: number = 0.3
 ): { control1: Point; control2: Point } {
-  // Distance for perpendicular segments - creates true 90-degree exit/entry
-  const perpendicularDistance = 80;
+  // For center connections, use simpler direct curve
+  if (sourceConnectionSide === 'center' || targetConnectionSide === 'center') {
+    const midX = (start.x + end.x) / 2;
+    
+    return {
+      control1: { x: midX, y: start.y },
+      control2: { x: midX, y: end.y }
+    };
+  }
   
-  // Calculate directions
+  // Simplified curve logic that works better for grid layouts
+  const dx = end.x - start.x;
+  
+  // Calculate control points based on the direction and distance
+  const controlOffset = Math.min(Math.abs(dx) * 0.5, 100); // Limit the curve extent
+  
+  // Determine control point positions based on connection sides
   const sourceDirection = sourceConnectionSide === 'right' ? 1 : -1;
   const targetDirection = targetConnectionSide === 'right' ? 1 : -1;
   
-  // Create perpendicular exit point (90 degrees from source)
-  const exitPoint: Point = {
-    x: start.x + sourceDirection * perpendicularDistance,
+  const control1: Point = {
+    x: start.x + sourceDirection * controlOffset,
     y: start.y
   };
   
-  // Create perpendicular entry point (90 degrees to target)
-  const entryPoint: Point = {
-    x: end.x + targetDirection * perpendicularDistance,
-    y: end.y
-  };
-  
-  // Control points create smooth transition between perpendicular segments
-  // This creates an S-curve that maintains 90-degree angles at both ends
-  const control1: Point = {
-    x: exitPoint.x,
-    y: start.y + (end.y - start.y) * 0.3 // Gradual vertical transition
-  };
-  
   const control2: Point = {
-    x: entryPoint.x,
-    y: end.y - (end.y - start.y) * 0.3 // Gradual vertical transition
+    x: end.x + targetDirection * controlOffset,
+    y: end.y
   };
   
   return { control1, control2 };
@@ -137,8 +136,8 @@ export function calculateControlPoints(
 export function generateOptimizedCurve(
   start: Point,
   end: Point,
-  sourceConnectionSide: 'left' | 'right',
-  targetConnectionSide: 'left' | 'right',
+  sourceConnectionSide: 'left' | 'right' | 'center',
+  targetConnectionSide: 'left' | 'right' | 'center',
   nodes: PositionedGraphNode[],
   nodeWidth: number,
   nodeHeight: number,
@@ -184,32 +183,30 @@ export function generateOptimizedCurve(
 function generateAlternativeRoute(
   start: Point,
   end: Point,
-  sourceConnectionSide: 'left' | 'right',
-  targetConnectionSide: 'left' | 'right',
+  sourceConnectionSide: 'left' | 'right' | 'center',
+  targetConnectionSide: 'left' | 'right' | 'center',
   nodes: PositionedGraphNode[],
   nodeWidth: number,
   nodeHeight: number,
   sourceId: string,
   targetId: string
 ): BezierCurve {
-  // Calculate a route that goes around obstacles
-  const dy = end.y - start.y;
+  // Use a much simpler fallback - just use the basic control points
+  // without extreme routing
+  const dx = end.x - start.x;
+  const controlOffset = Math.min(Math.abs(dx) * 0.4, 80);
   
-  // Determine if we should route above or below
-  const routeAbove = dy > 0;
-  const verticalOffset = routeAbove ? -nodeHeight * 1.5 : nodeHeight * 1.5;
-  
-  // Create control points that route around obstacles
-  const midY = start.y + dy * 0.5 + verticalOffset;
+  const sourceDirection = sourceConnectionSide === 'right' ? 1 : -1;
+  const targetDirection = targetConnectionSide === 'right' ? 1 : -1;
   
   const control1: Point = {
-    x: start.x + (sourceConnectionSide === 'right' ? nodeWidth : -nodeWidth),
-    y: midY
+    x: start.x + sourceDirection * controlOffset,
+    y: start.y
   };
   
   const control2: Point = {
-    x: end.x + (targetConnectionSide === 'right' ? nodeWidth : -nodeWidth),
-    y: midY
+    x: end.x + targetDirection * controlOffset,
+    y: end.y
   };
   
   return { start, control1, control2, end };
@@ -239,11 +236,12 @@ export function bezierCurveToPath(curve: BezierCurve): string {
   
   // Determine directions for proper corner calculations
   const goingDown = end.y > start.y;
-  const goingRight = end.x > middleX;
+  const goingLeft = start.x > middleX; // First segment direction
+  const goingRight = end.x > middleX;  // Third segment direction
   
   // Calculate rounded corner points properly
   // First corner: from horizontal to vertical
-  const corner1Start = { x: middleX - cornerRadius, y: start.y };
+  const corner1Start = { x: middleX - (goingLeft ? -cornerRadius : cornerRadius), y: start.y };
   const corner1End = { x: middleX, y: start.y + (goingDown ? cornerRadius : -cornerRadius) };
   
   // Second corner: from vertical to horizontal  
