@@ -404,6 +404,11 @@ const D3Graph: React.FC<D3GraphProps> = ({
         return transform;
       })
       .call(d3.drag<SVGGElement, PositionedGraphNode>()
+        .subject((event, d) => {
+          // Always use the current layout position as the drag subject
+          const currentNode = layoutNodes.find(n => n.id === d.id);
+          return currentNode ? { x: currentNode.x, y: currentNode.y } : { x: d.x, y: d.y };
+        })
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended)
@@ -468,6 +473,13 @@ const D3Graph: React.FC<D3GraphProps> = ({
       if (target.tagName === 'DIV' || target.closest('div')) {
         event.sourceEvent?.stopPropagation();
         return;
+      }
+      
+      // Sync the data object with current layout position
+      const currentNode = layoutNodes.find(n => n.id === d.id);
+      if (currentNode) {
+        d.x = currentNode.x;
+        d.y = currentNode.y;
       }
       
       // Find the node group by data ID - more reliable than using event target
@@ -671,6 +683,10 @@ const D3Graph: React.FC<D3GraphProps> = ({
         d3.zoomIdentity
       );
   };
+
+  useEffect(() => {
+    resetZoom();
+  }, [layoutResetTrigger])
 
   const resetLayout = () => {
     // Set flag to indicate this is a layout reset (preserve zoom)
