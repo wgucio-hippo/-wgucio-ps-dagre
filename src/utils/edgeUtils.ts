@@ -232,7 +232,16 @@ export function bezierCurveToPath(curve: BezierCurve): string {
   
   // Use percentage of the shortest segment, with min/max bounds
   const minSegment = Math.min(horizontalLength1, horizontalLength2, verticalLength);
-  const cornerRadius = Math.min(Math.max(minSegment * 0.3, 8), 20); // 30% of shortest segment, min 8px, max 20px
+  
+  // Special handling for small Y differences to avoid odd curves
+  const maxAllowedRadius = Math.min(verticalLength / 2, 20); // Never exceed half the vertical distance
+  const baseRadius = Math.min(Math.max(minSegment * 0.3, 8), 20); // 30% of shortest segment, min 8px, max 20px
+  const cornerRadius = Math.min(baseRadius, maxAllowedRadius);
+  
+  // If Y difference is very small, use straight line instead of curves
+  if (verticalLength < 4) {
+    return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+  }
   
   // Determine directions for proper corner calculations
   const goingDown = end.y > start.y;

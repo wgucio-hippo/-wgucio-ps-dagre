@@ -18,6 +18,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
   // Material Icons SVG for assignment_ind (role icon)
   const RoleIcon = () => (
     <svg 
+      aria-label="permission group"
       width="16" 
       height="16" 
       viewBox="0 0 24 24" 
@@ -35,6 +36,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
   // Material Icons SVG for shield_toggle (permission icon)
   const PermissionIcon = () => (
     <svg 
+      aria-label="permission set"
       width="16" 
       height="16" 
       viewBox="0 0 24 24" 
@@ -52,6 +54,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
   // Material Icons SVG for passkey (access key icon)
   const PasskeyIcon = () => (
     <svg 
+      aria-label="permission"
       width="16" 
       height="16" 
       viewBox="0 0 24 24" 
@@ -69,6 +72,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
   // Material Icons SVG for toggle_on (enabled state)
   const ToggleOnIcon = () => (
     <svg 
+      aria-label="on"
       width="12" 
       height="12" 
       viewBox="0 0 24 24" 
@@ -86,6 +90,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
   // Material Icons SVG for toggle_off (disabled state)
   const ToggleOffIcon = () => (
     <svg 
+      aria-label="off"
       width="12" 
       height="12" 
       viewBox="0 0 24 24" 
@@ -169,7 +174,7 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',}}>
           <div style={{alignItems: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'row'}}>
-            <span>{getNodeIcon()}</span><span>{getToggleIcon()}</span>
+            <span title={node.type}>{getNodeIcon()}</span><span>{getToggleIcon()}</span>
           </div>
           <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
             {node.id}
@@ -194,6 +199,9 @@ const GraphNode: React.FC<GraphNodeProps> = ({ node, width, height, color, onCli
           </div>}
           {node.type === 'permissionSet' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left' }}>
             Set: <span style={{ fontWeight: 'bold' }}>{node.resource}</span>
+          </div>}
+          {node.type === 'permissionGroup' && <div style={{marginLeft:'2px', overflow: 'hidden', textOverflow: 'ellipsis', width: '180px', textAlign:'left', marginTop: '8px' }}>
+            Name: <span style={{ fontWeight: 'bold' }}>{node.name}</span>
           </div>}
         </div>
       </div>
