@@ -11,6 +11,7 @@ interface FilteredApiDataGraphProps {
 
 const FilteredApiDataGraph: React.FC<FilteredApiDataGraphProps> = ({ width, height }) => {
   const [selectedPermissionGroup, setSelectedPermissionGroup] = useState<string>('');
+  const [selectedPermissionSet, setSelectedPermissionSet] = useState<string>('');
   
   // Fetch permission group roles for dropdown
   const { 
@@ -193,10 +194,56 @@ const FilteredApiDataGraph: React.FC<FilteredApiDataGraphProps> = ({ width, heig
     );
   }
 
-  // Transform API data to match GraphData interface
+  // Determine permission set nodes for secondary filter
+  const allNodes = Array.isArray(data.nodes) ? data.nodes : [];
+  const allEdges = Array.isArray(data.edges) ? data.edges : [];
+
+  const permissionSetNodes = allNodes.filter((node: any) => node.type === 'permissionSet');
+
+  // Build filtered nodes/edges (client-side filtering)
+  let visibleNodes = allNodes;
+  let visibleEdges = allEdges;
+
+  if (selectedPermissionSet) {
+    const visibleNodeIds = new Set<string>();
+
+    // Always include the selected permission set node itself
+    visibleNodeIds.add(selectedPermissionSet);
+
+    // Include all nodes directly connected to the selected permission set
+    allEdges.forEach((edge: any) => {
+      if (edge.source === selectedPermissionSet || edge.target === selectedPermissionSet) {
+        visibleNodeIds.add(edge.source);
+        visibleNodeIds.add(edge.target);
+      }
+    });
+
+    visibleNodes = allNodes.filter((node: any) => visibleNodeIds.has(node.id));
+    visibleEdges = allEdges.filter(
+      (edge: any) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    );
+  } else {
+    // No permission set selected: show only permission group 
+    // and permission set nodes with edges between them
+    const allowedNodeIds = new Set<string>();
+
+    visibleNodes = allNodes.filter((node: any) => {
+      const keep = node.type === 'permissionGroup' || node.type === 'permissionSet';
+      if (keep) {
+        allowedNodeIds.add(node.id);
+      }
+      return keep;
+    });
+
+    visibleEdges = allEdges.filter(
+      (edge: any) => allowedNodeIds.has(edge.source) && allowedNodeIds.has(edge.target)
+    );
+  }
+
+  // Transform (optionally filtered) API data to match GraphData interface
   const graphData: GraphData = {
-    nodes: Array.isArray(data.nodes) ? data.nodes : [],
-    edges: Array.isArray(data.edges) ? data.edges : []
+    nodes: visibleNodes,
+    edges: visibleEdges
   };
 
   // Don't render if we don't have valid data
@@ -266,7 +313,10 @@ const FilteredApiDataGraph: React.FC<FilteredApiDataGraphProps> = ({ width, heig
         <select
           id="permission-group-filter"
           value={selectedPermissionGroup}
-          onChange={(e) => setSelectedPermissionGroup(e.target.value)}
+          onChange={(e) => {
+            setSelectedPermissionGroup(e.target.value);
+            setSelectedPermissionSet('');
+          }}
           style={{
             padding: '5px 10px',
             borderRadius: '4px',
@@ -281,6 +331,29 @@ const FilteredApiDataGraph: React.FC<FilteredApiDataGraphProps> = ({ width, heig
             </option>
           ))}
         </select>
+
+        <label htmlFor="permission-set-filter" style={{ fontWeight: 'bold' }}>
+          Permission Set:
+        </label>
+        <select
+          id="permission-set-filter"
+          value={selectedPermissionSet}
+          onChange={(e) => setSelectedPermissionSet(e.target.value)}
+          style={{
+            padding: '5px 10px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+            fontSize: '14px'
+          }}
+        >
+          <option value="">All Permission Sets</option>
+          {permissionSetNodes.map((node: any) => (
+            <option key={node.id} value={node.id}>
+              {node.name}
+            </option>
+          ))}
+        </select>
+
         <div style={{ fontSize: '12px', color: '#666' }}>
           Showing {graphData.nodes.length} nodes, {graphData.edges.length} edges
         </div>
